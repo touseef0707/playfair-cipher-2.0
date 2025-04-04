@@ -1,0 +1,7 @@
+Secret Key: @234asd@12)(*
+Construction Method: Spiral Completion
+Original Message: Hello Boss@123
+Encrypted Message: GC%*KN)!U@D2PDS{
+Case Information: 863f
+Digraphs: HE LX LO _B OS S@ 12 3X
+Encrypted Digraphs: GC %* KN )! U@ D2 PD S{
