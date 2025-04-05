@@ -4,7 +4,6 @@ def prepare_message(message, filler='X'):
     """
     Prepares a message for Playfair encryption:
     - Preserves case information for later restoration
-    - Replaces spaces with underscores
     - Splits into digraphs (pairs of letters)
     - Ensures no pair has the same letter (inserts filler if needed)
     - Adds a filler character if the message length is odd
@@ -14,10 +13,9 @@ def prepare_message(message, filler='X'):
         filler: Character to use when splitting doubles or odd-length messages
     
     Returns:
-        List of digraphs (pairs of characters) and case map
+        A tuple containing (list of digraphs, case_map)
     """
-    # Replace spaces with underscores but preserve case information
-    message = message.replace(' ', '_')
+    # Create a case map (True for uppercase/non-alpha, False for lowercase)
     case_map = [c.isupper() or not c.isalpha() for c in message]
     
     # Convert to uppercase for matrix lookup
@@ -64,16 +62,32 @@ def find_position(matrix, char):
 
 def encrypt_playfair(message, matrix):
     """
-    Encrypts a message using the Playfair cipher while preserving case
+    Encrypt a message using the Playfair cipher.
+    
+    IMPORTANT: This implementation is designed for passwords.
+    - Messages should NOT contain spaces
+    - Uses 'X' as a filler character for repeated letters and odd-length messages
+    - Case information is preserved separately
     
     Args:
-        message: The plaintext message
-        matrix: The encryption matrix
+        message: The plaintext message to encrypt
+        matrix: The encryption matrix (7x7)
     
     Returns:
-        Encrypted message and case information
+        A tuple containing (encrypted_message, case_information)
     """
-    # Prepare the message and get case information
+    # Validate input characters
+    valid_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-{}"
+    for char in message:
+        if char not in valid_chars:
+            raise ValueError(f"Invalid character '{char}' in text. Only letters, numbers, and these special characters are allowed: !@#$%^&*()_+-{{}}")
+    
+    if ' ' in message:
+        print("WARNING: Message contains spaces. Spaces are not supported in this implementation.")
+        print("Spaces will be removed from the message.")
+        message = message.replace(' ', '')
+    
+    # Prepare the message (create digraphs with fillers) and track case
     digraphs, case_map = prepare_message(message)
     
     # Encrypt each pair
@@ -115,11 +129,13 @@ def encrypt_playfair(message, matrix):
                 matrix[row2][col1]
             )
     
-    # Encrypt the case information along with the message
-    # We'll use a simple encoding scheme where 1=uppercase, 0=lowercase
-    case_bits = ''.join('1' if is_upper else '0' for is_upper in case_map)
+    # Encrypt the case information
+    # Convert case map to bits where 1=uppercase, 0=lowercase
+    case_bits = ''
+    for is_upper in case_map:
+        case_bits += '1' if is_upper else '0'
     
-    # Convert case bits to characters (every 4 bits become a hex digit)
+    # Convert case bits to hexadecimal
     case_encoded = ''
     for i in range(0, len(case_bits), 4):
         chunk = case_bits[i:i+4].ljust(4, '0')  # Ensure 4 bits, pad with 0s
@@ -133,11 +149,16 @@ def encrypt_playfair(message, matrix):
 
 def main():
     """Main function for Playfair encryption"""
-    print("=== Playfair Cipher Encryption with Case Preservation ===")
+    print("=== Playfair Cipher Encryption for Passwords ===")
+    print("Note: This implementation is designed for passwords without spaces.")
     
     # Get encryption parameters
     secret_key = input("Enter your secret key: ")
     matrix_size = 7  # Fixed for this assignment
+    
+    # Using fixed special characters
+    special_chars = methods.DEFAULT_SPECIAL_CHARS
+    print(f"Using fixed special characters: {special_chars}")
     
     print("\nSelect matrix construction method:")
     print("1 - Plain Traditional")
@@ -148,14 +169,14 @@ def main():
     
     # Generate the matrix
     if method == "1":
-        matrix = methods.PT(secret_key, matrix_size)
+        matrix = methods.PT(secret_key, matrix_size, special_chars)
     elif method == "2":
-        matrix = methods.KBT(secret_key, matrix_size)
+        matrix = methods.KBT(secret_key, matrix_size, special_chars)
     elif method == "3":
-        matrix = methods.SC(secret_key, matrix_size)
+        matrix = methods.SC(secret_key, matrix_size, special_chars)
     else:
         print("Invalid method. Using Plain Traditional as default.")
-        matrix = methods.PT(secret_key, matrix_size)
+        matrix = methods.PT(secret_key, matrix_size, special_chars)
     
     # Display the matrix
     print("\nEncryption Matrix:")
@@ -196,6 +217,7 @@ def main():
                 "3": "Spiral Completion"
             }.get(method, "Plain Traditional")
             f.write(f"Construction Method: {method_name}\n")
+            f.write(f"Special Characters: {special_chars}\n")
             f.write(f"Original Message: {message}\n")
             f.write(f"Encrypted Message: {encrypted}\n")
             f.write(f"Case Information: {case_encoded}\n")

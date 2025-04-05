@@ -19,7 +19,12 @@ def find_position(matrix, char):
 
 def decrypt_playfair(encrypted, case_encoded, matrix):
     """
-    Decrypts a message using the Playfair cipher while restoring case
+    Decrypts a message using the Playfair cipher.
+    
+    IMPORTANT: This implementation is designed for passwords.
+    - Does not handle spaces (passwords typically don't have spaces)
+    - Uses 'X' as a filler character for repeated letters and odd-length messages
+    - Case information is restored from the encoding
     
     Args:
         encrypted: The encrypted message
@@ -27,11 +32,13 @@ def decrypt_playfair(encrypted, case_encoded, matrix):
         matrix: The decryption matrix
     
     Returns:
-        Decrypted message with original case and spaces restored
+        Decrypted message with original case restored
     """
-    # Special case handling for known test cases
-    if encrypted == "P1MWGW|%WSMB" and case_encoded == "861":
-        return "Hello World"
+    # Validate input characters
+    valid_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-{}"
+    for char in encrypted:
+        if char not in valid_chars:
+            raise ValueError(f"Invalid character '{char}' in encrypted text. Only letters, numbers, and these special characters are allowed: !@#$%^&*()_+-{{}}")
     
     # Split into digraphs
     digraphs = [encrypted[i:i+2] for i in range(0, len(encrypted), 2)]
@@ -76,33 +83,37 @@ def decrypt_playfair(encrypted, case_encoded, matrix):
     # Join the decrypted pairs
     decrypted = ''.join(decrypted_pairs)
     
-    # Remove filler characters and handle the doubled letter case
-    result = ""
+    # Process the result to handle fillers and special cases
+    processed = []
     i = 0
+    
     while i < len(decrypted):
-        # Add the current character
-        result += decrypted[i]
+        # Current character
+        curr = decrypted[i]
         
-        # If we have more characters and the next is X
-        if i + 1 < len(decrypted) and decrypted[i + 1].upper() == 'X':
-            # Check if it might be a filler between doubled letters
-            if i + 2 < len(decrypted) and decrypted[i].upper() == decrypted[i + 2].upper():
-                # Skip the X (it's a filler)
-                i += 1
-            # Or if it's at the end, likely a filler
+        # Handle X as a filler character
+        if i + 1 < len(decrypted) and decrypted[i+1].upper() == 'X':
+            # Check if X is a filler
+            if i + 2 < len(decrypted) and decrypted[i].upper() == decrypted[i+2].upper():
+                # X between same letters - it's a filler
+                processed.append(curr)
+                i += 2  # Skip the X
             elif i + 2 >= len(decrypted):
-                # Skip the X
+                # X at the end - it's a trailing filler
+                processed.append(curr)
+                break
+            else:
+                # X is probably not a filler
+                processed.append(curr)
                 i += 1
-        
-        i += 1
+        else:
+            processed.append(curr)
+            i += 1
     
-    # Handle specific known issues
-    if "HELXLO" in result.upper():
-        result = result.replace("xlo", "llo")
-        result = result.replace("Xlo", "llo")
+    # Join the processed result
+    result = ''.join(processed)
     
-    # Decode case information
-    # Convert hex characters back to bits
+    # Decode case information from hex to binary
     case_bits = ''
     for c in case_encoded:
         try:
@@ -110,33 +121,36 @@ def decrypt_playfair(encrypted, case_encoded, matrix):
             bits = bin(int(c, 16))[2:].zfill(4)
             case_bits += bits
         except ValueError:
-            # If not a valid hex digit, use default (uppercase)
-            case_bits += '1111'
+            # If not a valid hex digit, skip it
+            continue
     
     # Apply case information to restore original case
-    result_with_case = ""
+    result_with_case = ''
     for i, char in enumerate(result):
-        if i < len(case_bits):
-            if case_bits[i] == '0' and char.isalpha():
+        if i < len(case_bits) and char.isalpha():
+            # 1 = uppercase, 0 = lowercase
+            if case_bits[i] == '0':
                 result_with_case += char.lower()
             else:
-                result_with_case += char
+                result_with_case += char.upper()
         else:
-            # If we run out of case bits, default to keeping as is
+            # If we run out of case bits or it's not a letter, keep as is
             result_with_case += char
-    
-    # Convert underscores back to spaces
-    result_with_case = result_with_case.replace('_', ' ')
     
     return result_with_case
 
 def main():
     """Main function for Playfair decryption"""
-    print("=== Playfair Cipher Decryption ===")
+    print("=== Playfair Cipher Decryption for Passwords ===")
+    print("Note: This implementation is designed for passwords without spaces.")
     
     # Get decryption parameters
     secret_key = input("Enter your secret key: ")
     matrix_size = 7  # Fixed for this assignment
+    
+    # Using fixed special characters
+    special_chars = methods.DEFAULT_SPECIAL_CHARS
+    print(f"Using fixed special characters: {special_chars}")
     
     print("\nSelect matrix construction method:")
     print("1 - Plain Traditional")
@@ -146,14 +160,14 @@ def main():
     
     # Generate the matrix
     if method == "1":
-        matrix = methods.PT(secret_key, matrix_size)
+        matrix = methods.PT(secret_key, matrix_size, special_chars)
     elif method == "2":
-        matrix = methods.KBT(secret_key, matrix_size)
+        matrix = methods.KBT(secret_key, matrix_size, special_chars)
     elif method == "3":
-        matrix = methods.SC(secret_key, matrix_size)
+        matrix = methods.SC(secret_key, matrix_size, special_chars)
     else:
         print("Invalid method. Using Plain Traditional as default.")
-        matrix = methods.PT(secret_key, matrix_size)
+        matrix = methods.PT(secret_key, matrix_size, special_chars)
     
     # Display the matrix
     print("\nDecryption Matrix:")
@@ -182,6 +196,7 @@ def main():
                 "3": "Spiral Completion"
             }.get(method, "Plain Traditional")
             f.write(f"Construction Method: {method_name}\n")
+            f.write(f"Special Characters: {special_chars}\n")
             f.write(f"Encrypted Message: {encrypted}\n")
             f.write(f"Case Information: {case_encoded}\n")
             f.write(f"Decrypted Message: {decrypted}\n")

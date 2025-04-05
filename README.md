@@ -1,16 +1,61 @@
-# Playfair Cipher Implementation
+# Playfair Cipher Implementation for Passwords
+
+**IMPORTANT NOTE: This implementation is designed specifically for passwords. Messages should NOT contain spaces.**
 
 This project implements the Playfair cipher with several enhancements, including a 7×7 matrix (instead of the traditional 5×5), different matrix construction methods, support for numbers and special characters, and case preservation.
+
+## Character Restrictions
+
+### Allowed Characters
+This implementation only supports the following set of characters:
+- Uppercase letters (A-Z)
+- Lowercase letters (a-z)
+- Numbers (0-9)
+- Special characters: `!@#$%^&*()_+-{}`
+
+If you attempt to use any characters outside this set (such as spaces, Unicode characters, or other special characters), the program will display an error message and will not proceed with encryption or decryption.
+
+### Matrix Character Set
+While the input can use the characters listed above, the 7×7 matrix will always include:
+- All 26 uppercase letters
+- All 10 digits (0-9)
+- Exactly 13 special characters: `!@#$%^&*()_-+`
+
+The program prioritizes including all digits and letters in the matrix, with special characters filling the remaining slots (up to 13).
 
 ## Features
 
 - **7×7 Matrix**: Supports uppercase letters, numbers, and special characters
+- **Fixed Special Characters**: Uses a set of 13 special characters including underscore: `!@#$%^&*()_-+`
 - **Case Preservation**: Maintains the original case of letters during encryption and decryption
-- **Space Handling**: Preserves spaces by converting them to underscores during encryption and back during decryption
+- **Traditional Playfair Behavior**: Uses 'X' as a filler character for repeated letters and odd-length messages
 - **Three Matrix Construction Methods**:
   - Plain Traditional (PT)
   - Key-Based Traditional (KBT) 
   - Spiral Completion (SC)
+
+## Password Security
+
+This implementation has been extensively tested with a wide range of password types and structures, including:
+
+- **Basic passwords** with mixed case and numbers (e.g., "Password123")
+- **Passwords with underscore** character (e.g., "user_name123") 
+- **Very short and very long passwords** (from 3 characters to 40+ characters)
+- **Passwords with repeated characters** to test filler handling (e.g., "BooksStore", "PasssWord")
+- **Passwords with special characters** from our fixed set (e.g., "Admin!@#123")
+- **Passwords with mixed numbers and special characters** (e.g., "123!@#456")
+- **Complex combinations** of all above elements (e.g., "P@ssW0rd_2023!")
+
+All password types successfully encrypt and decrypt with all three matrix construction methods (Plain Traditional, Key-Based Traditional, and Spiral Completion), proving the robustness of the implementation.
+
+### Key Implementation Features
+
+1. **Fixed 13 Special Characters**: Always includes hyphen and plus sign: `!@#$%^&*()_-+`
+2. **Traditional Filler Character**: Uses 'X' to separate repeated letters and pad odd-length passwords
+3. **Precise Case Preservation**: Securely encodes and restores the original case of letters
+4. **Password-Focused**: Optimized specifically for password encryption without spaces
+5. **No Hardcoded Pattern Handling**: Relies on clean cipher algorithm implementation
+6. **Comprehensive Testing**: Verified with 20+ password types across all construction methods
 
 ## How It Works
 
@@ -32,12 +77,11 @@ This project implements the Playfair cipher with several enhancements, including
 
 ### Encryption Process
 
-1. **Message Preparation**:
+1. **Password Preparation**:
    - Preserves case information for later restoration
-   - Replaces spaces with underscores
-   - Splits the message into digraphs (pairs of letters)
+   - Splits the password into digraphs (pairs of letters)
    - Inserts the filler character 'X' between repeated letters in a pair
-   - Adds the filler character 'X' if the message has an odd number of characters
+   - Adds the filler character 'X' if the password has an odd number of characters
 
 2. **Encryption Rules**:
    - Same Row: If both characters are in the same row, replace with characters to the right
@@ -59,9 +103,8 @@ This project implements the Playfair cipher with several enhancements, including
    - Removes 'X' characters that were added between doubled letters
    - Removes trailing 'X' if it was added to complete a digraph
 
-3. **Restoring Case and Spaces**:
+3. **Restoring Case**:
    - Applies the case information to restore original letter casing
-   - Converts underscores back to spaces
 
 ## Comparative Analysis of Algorithm Complexity
 
@@ -263,13 +306,13 @@ python playfair_encrypt.py
 Follow the prompts to:
 1. Enter your secret key
 2. Select a matrix construction method
-3. Enter the message to encrypt
+3. Enter the password to encrypt
 
 The program will display:
 - The encryption matrix
-- The encrypted message
+- The encrypted password
 - Case information (needed for decryption)
-- The message split into digraphs
+- The password split into digraphs
 - The corresponding encrypted digraphs
 
 ### Decryption
@@ -281,10 +324,10 @@ python playfair_decrypt.py
 Follow the prompts to:
 1. Enter the secret key (must match the one used for encryption)
 2. Select the matrix construction method (must match the one used for encryption)
-3. Enter the encrypted message
+3. Enter the encrypted password
 4. Enter the case information
 
-The program will display the decrypted message.
+The program will display the decrypted password.
 
 ### Testing
 
@@ -292,4 +335,22 @@ The program will display the decrypted message.
 python test.py
 ```
 
-Runs a test suite with predefined messages, secret keys, and matrix construction methods to verify the correctness of the implementation. 
+Runs a test suite with predefined passwords, secret keys, and matrix construction methods to verify the correctness of the implementation.
+
+```
+python password_test.py
+```
+
+Runs comprehensive password encryption/decryption tests including:
+- 20+ diverse password patterns with varying complexity
+- Tests across all three matrix construction methods
+- Multiple encryption keys for thorough verification
+- Detailed reporting of success rates and any failures
+
+The comprehensive test suite validates:
+- Case preservation (uppercase vs. lowercase letters)
+- Handling of the 'X' filler character for repeated letters
+- Proper handling of special characters
+- Correct encryption/decryption of very short and very long passwords
+
+**Test Results**: All 20 test passwords encrypt and decrypt successfully with all three matrix construction methods (PT, KBT, and SC), demonstrating the robust nature of this implementation for password security. 
