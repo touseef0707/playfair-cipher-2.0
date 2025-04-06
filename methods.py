@@ -191,17 +191,12 @@ def KBT(key, matrix_size, special_chars=DEFAULT_SPECIAL_CHARS):
     # Create the fill order with priority:
     # 1. Key characters first
     # 2. Remaining alphabets
-    # 3. All 10 digits (ensuring all digits are included)
-    # 4. Special characters (up to 13)
+    # 3. Special characters (up to 13)
+    # 4. All 10 digits
     fill_order = key_chars.copy()
     
     # Add remaining alphabets
     for c in alphabet:
-        if c not in fill_order:
-            fill_order.append(c)
-    
-    # Add all digits (ensure digits 0-9 are included)
-    for c in digits:
         if c not in fill_order:
             fill_order.append(c)
     
@@ -211,6 +206,11 @@ def KBT(key, matrix_size, special_chars=DEFAULT_SPECIAL_CHARS):
         if c not in fill_order and special_count < 13:
             fill_order.append(c)
             special_count += 1
+    
+    # Add all digits (ensure digits 0-9 are included)
+    for c in digits:
+        if c not in fill_order:
+            fill_order.append(c)
     
     # Create the matrix
     matrix = []
@@ -229,7 +229,7 @@ def KBT(key, matrix_size, special_chars=DEFAULT_SPECIAL_CHARS):
 
 def SC(key, matrix_size, special_chars=DEFAULT_SPECIAL_CHARS):
     """
-    Implement the Spiral Completion matrix construction method
+    Implement the Spiral Completion matrix construction method with Key-Based ordering
     
     Args:
         key: The secret key
@@ -237,7 +237,7 @@ def SC(key, matrix_size, special_chars=DEFAULT_SPECIAL_CHARS):
         special_chars: Special characters to include in the matrix
     
     Returns:
-        A square matrix filled in a spiral pattern
+        A square matrix filled in a spiral pattern using key-based character ordering
     """
     # Process the key
     key = sanitize_key(key)
@@ -259,17 +259,12 @@ def SC(key, matrix_size, special_chars=DEFAULT_SPECIAL_CHARS):
     # Create the fill order with priority:
     # 1. Key characters first
     # 2. Remaining alphabets
-    # 3. All 10 digits (ensuring all digits are included)
-    # 4. Special characters (up to 13)
+    # 3. Special characters (up to 13)
+    # 4. All 10 digits
     fill_order = key_chars.copy()
     
     # Add remaining alphabets
     for c in alphabet:
-        if c not in fill_order:
-            fill_order.append(c)
-    
-    # Add all digits (ensure digits 0-9 are included)
-    for c in digits:
         if c not in fill_order:
             fill_order.append(c)
     
@@ -279,6 +274,11 @@ def SC(key, matrix_size, special_chars=DEFAULT_SPECIAL_CHARS):
         if c not in fill_order and special_count < 13:
             fill_order.append(c)
             special_count += 1
+    
+    # Add all digits (ensure digits 0-9 are included)
+    for c in digits:
+        if c not in fill_order:
+            fill_order.append(c)
     
     # Create the matrix with "." (empty cells)
     matrix = [["." for _ in range(matrix_size)] for _ in range(matrix_size)]
@@ -333,12 +333,12 @@ def validate_secret_key(key):
         return False, "Error: Secret key must be at least 6 characters long."
     return True, "Valid key."
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
 
-# print("Plain Traditional (PT):")
-# print_matrix(PT("P@55WORD!",7))
-# print("\nKey-Based Traditional (KBT):")
-# print_matrix(KBT("P@55WORD!",7))
-# print("\nSpiral Completion (SC):")
-# print_matrix(SC("P@55WORD!",7))
+print("Plain Traditional (PT):")
+print_matrix(PT("P@55WORD!",7))
+print("\nKey-Based Traditional (KBT):")
+print_matrix(KBT("P@55WORD!",7))
+print("\nSpiral Completion (SC):")
+print_matrix(SC("P@55WORD!",7))

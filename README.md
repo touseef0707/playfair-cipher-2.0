@@ -67,13 +67,55 @@ All password types successfully encrypt and decrypt with all three matrix constr
    - Fills the matrix row by row, from left to right
 
 2. **Key-Based Traditional (KBT)**:
-   - Places the secret key (with duplicates removed)
-   - Determines a starting position in the matrix based on the key
-   - Fills the matrix starting from that position, moving right to left, top to bottom
+   - Places the secret key (with duplicates removed) first
+   - Fills the remaining cells with unused characters in this order: remaining alphabets, special characters, and then digits
+   - Fills the matrix row by row, from left to right, maintaining this specific character ordering priority
 
 3. **Spiral Completion (SC)**:
-   - Places the secret key (with duplicates removed)
+   - Places the secret key (with duplicates removed) first
+   - Uses the same character ordering as KBT: remaining alphabets, special characters, then digits
    - Fills the matrix in a spiral pattern: starting from the top-left, moving right, then down, then left, then up, and continuing inward
+
+Note: The different character ordering between PT and the other methods (KBT, SC) creates additional variation in the encryption matrices, enhancing security.
+
+### Matrix Examples
+
+Here are examples of matrices generated using the key 'P@55W0RD!' with each construction method:
+
+#### Plain Traditional (PT)
+```
+P  @  5  W  0  R  D
+!  A  B  C  E  F  G
+H  I  J  K  L  M  N
+O  Q  S  T  U  V  X
+Y  Z  1  2  3  4  6
+7  8  9  #  $  %  ^
+&  *  (  )  _  -  +
+```
+
+#### Key-Based Traditional (KBT)
+```
+P  @  5  W  0  R  D
+!  A  B  C  E  F  G
+H  I  J  K  L  M  N
+O  Q  S  T  U  V  X
+Y  Z  #  $  %  ^  &
+*  (  )  _  -  +  1
+2  3  4  6  7  8  9
+```
+
+#### Spiral Completion (SC)
+```
+P  @  5  W  0  R  D
+S  T  U  V  X  Y  !
+Q  -  +  1  2  Z  A
+O  _  8  9  3  #  B
+N  )  7  6  4  $  C
+M  (  *  &  ^  %  E
+L  K  J  I  H  G  F
+```
+
+Note how PT places digits before special characters, while both KBT and SC place special characters before digits. Additionally, SC fills the matrix in a spiral pattern rather than row by row.
 
 ### Encryption Process
 
