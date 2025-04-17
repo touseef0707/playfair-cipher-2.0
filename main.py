@@ -13,8 +13,30 @@ def encrypt_mode():
     print("=== Playfair Cipher Encryption for Passwords ===")
     print("Note: This implementation is designed for passwords without spaces.")
     
-    # Get encryption parameters
-    secret_key = input("Enter your secret key: ")
+    # Ask if user wants to use a file for input
+    use_file = input("Use a file for input? (y/n): ").lower() == 'y'
+    
+    if use_file:
+        input_file = input("Enter input filename (default: input.txt): ") or "input.txt"
+        try:
+            with open(input_file, 'r') as f:
+                lines = f.readlines()
+                if len(lines) >= 1:
+                    secret_key = lines[0].strip()
+                    message = lines[1].strip() if len(lines) > 1 else input("\nEnter the password to encrypt: ")
+                else:
+                    print("File does not contain enough information. Using manual input.")
+                    secret_key = input("Enter your secret key: ")
+                    message = input("\nEnter the password to encrypt: ")
+        except FileNotFoundError:
+            print(f"File {input_file} not found. Using manual input.")
+            secret_key = input("Enter your secret key: ")
+            message = input("\nEnter the password to encrypt: ")
+    else:
+        # Get encryption parameters manually
+        secret_key = input("Enter your secret key: ")
+        message = input("\nEnter the password to encrypt: ")
+    
     matrix_size = 7  # Fixed for this assignment
     
     # Using fixed special characters
@@ -25,9 +47,6 @@ def encrypt_mode():
     matrix = methods.PT(secret_key, matrix_size, special_chars)
     print("\nEncryption Matrix (Plain Traditional):")
     methods.print_matrix(matrix)
-    
-    # Get message to encrypt
-    message = input("\nEnter the password to encrypt: ")
     
     try:
         # Encrypt the message
@@ -45,29 +64,14 @@ def encrypt_mode():
         print("\nPassword split into digraphs:")
         print(' '.join(digraphs))
         
-        # Option to save to file
-        save = input("\nSave encryption details to file? (y/n): ").lower()
+        # Always offer to save to file
+        filename = "encryption.txt"
+        save = input(f"\nSave encryption results to {filename}? (y/n): ").lower()
         if save == 'y':
-            filename = input("Enter filename (default: playfair_encryption.txt): ") or "playfair_encryption.txt"
             with open(filename, 'w') as f:
-                f.write(f"Secret Key: {secret_key}\n")
-                f.write(f"Construction Method: Plain Traditional\n")
-                f.write(f"Original Message: {message}\n")
-                f.write(f"Encrypted Message: {encrypted}\n")
-                f.write(f"Case Information: {case_encoded}\n")
-                f.write(f"Digraphs: {' '.join(digraphs)}\n")
-                
-                # Get the core encrypted digraphs (before transformation)
-                matrix_flat = [char for row in matrix for char in row]
-                core_pairs = []
-                for dg in digraphs:
-                    c1, c2 = dg[0], dg[1]
-                    encrypted_pair = playfair_encrypt.encrypt_digraph(c1, c2, matrix, matrix_flat)
-                    core_pairs.append(encrypted_pair)
-                core_encrypted = ''.join(core_pairs)
-                enc_digraphs = [core_encrypted[i:i+2] for i in range(0, len(core_encrypted), 2)]
-                f.write(f"Encrypted Digraphs: {' '.join(enc_digraphs)}\n")
-                
+                f.write(f"{secret_key}\n")
+                f.write(f"{encrypted}\n")
+                f.write(f"{case_encoded}\n")
             print(f"Encryption details saved to {filename}")
     
     except ValueError as e:
@@ -79,8 +83,34 @@ def decrypt_mode():
     print("=== Playfair Cipher Decryption for Passwords ===")
     print("Note: This implementation is designed for passwords without spaces.")
     
-    # Get decryption parameters
-    secret_key = input("Enter your secret key: ")
+    # Ask if user wants to use a file for input
+    use_file = input("Use a file for input? (y/n): ").lower() == 'y'
+    
+    if use_file:
+        input_file = input("Enter input filename (default: encryption.txt): ") or "encryption.txt"
+        try:
+            with open(input_file, 'r') as f:
+                lines = f.readlines()
+                if len(lines) >= 3:
+                    secret_key = lines[0].strip()
+                    encrypted = lines[1].strip()
+                    case_encoded = lines[2].strip()
+                else:
+                    print("File does not contain enough information. Using manual input.")
+                    secret_key = input("Enter your secret key: ")
+                    encrypted = input("\nEnter the encrypted message: ")
+                    case_encoded = input("Enter the case information: ")
+        except FileNotFoundError:
+            print(f"File {input_file} not found. Using manual input.")
+            secret_key = input("Enter your secret key: ")
+            encrypted = input("\nEnter the encrypted message: ")
+            case_encoded = input("Enter the case information: ")
+    else:
+        # Get decryption parameters manually
+        secret_key = input("Enter your secret key: ")
+        encrypted = input("\nEnter the encrypted message: ")
+        case_encoded = input("Enter the case information: ")
+    
     matrix_size = 7  # Fixed for this assignment
     
     # Using fixed special characters
@@ -92,10 +122,6 @@ def decrypt_mode():
     print("\nDecryption Matrix (Plain Traditional):")
     methods.print_matrix(matrix)
     
-    # Get encrypted message and metadata
-    encrypted = input("\nEnter the encrypted message: ")
-    case_encoded = input("Enter the case information: ")
-    
     try:
         # Decrypt the message
         decrypted = playfair_decrypt.decrypt_playfair(encrypted, case_encoded, matrix, secret_key)
@@ -104,17 +130,13 @@ def decrypt_mode():
         print("\nDecrypted message:")
         print(decrypted)
         
-        # Option to save to file
-        save = input("\nSave decryption details to file? (y/n): ").lower()
+        # Save decryption details
+        filename = "decryption.txt"
+        save = input(f"\nSave decrypted message to {filename}? (y/n): ").lower()
         if save == 'y':
-            filename = input("Enter filename (default: playfair_decryption.txt): ") or "playfair_decryption.txt"
             with open(filename, 'w') as f:
-                f.write(f"Secret Key: {secret_key}\n")
-                f.write(f"Construction Method: Plain Traditional\n")
-                f.write(f"Encrypted Message: {encrypted}\n")
-                f.write(f"Case Information: {case_encoded}\n")
-                f.write(f"Decrypted Message: {decrypted}\n")
-            print(f"Decryption details saved to {filename}")
+                f.write(f"{decrypted}\n")
+            print(f"Decrypted message saved to {filename}")
     
     except ValueError as e:
         print(f"\nError: {str(e)}")

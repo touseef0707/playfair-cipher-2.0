@@ -313,8 +313,30 @@ def main():
     print("=== Playfair Cipher Encryption for Passwords ===")
     print("Note: This implementation is designed for passwords without spaces.")
     
-    # Get encryption parameters
-    secret_key = input("Enter your secret key: ")
+    # Ask if user wants to use a file for input
+    use_file = input("Use a file for input? (y/n): ").lower() == 'y'
+    
+    if use_file:
+        input_file = input("Enter input filename (default: input.txt): ") or "input.txt"
+        try:
+            with open(input_file, 'r') as f:
+                lines = f.readlines()
+                if len(lines) >= 1:
+                    secret_key = lines[0].strip()
+                    message = lines[1].strip() if len(lines) > 1 else input("\nEnter the password to encrypt: ")
+                else:
+                    print("File does not contain enough information. Using manual input.")
+                    secret_key = input("Enter your secret key: ")
+                    message = input("\nEnter the password to encrypt: ")
+        except FileNotFoundError:
+            print(f"File {input_file} not found. Using manual input.")
+            secret_key = input("Enter your secret key: ")
+            message = input("\nEnter the password to encrypt: ")
+    else:
+        # Get encryption parameters manually
+        secret_key = input("Enter your secret key: ")
+        message = input("\nEnter the password to encrypt: ")
+    
     matrix_size = 7  # Fixed for this assignment
     
     # Using fixed special characters
@@ -326,42 +348,34 @@ def main():
     print("\nEncryption Matrix (Plain Traditional):")
     methods.print_matrix(matrix)
     
-    # Get message to encrypt
-    message = input("\nEnter the password to encrypt: ")
+    try:
+        # Encrypt the message
+        encrypted, case_encoded = encrypt_playfair(message, matrix, secret_key)
+        
+        # Display the result
+        print("\nEncrypted message:")
+        print(encrypted)
+        
+        print("\nCase information (needed for decryption):")
+        print(case_encoded)
+        
+        # Display the prepared digraphs for clarity
+        digraphs, _ = prepare_message(message)
+        print("\nPassword split into digraphs:")
+        print(' '.join(digraphs))
+        
+        # Always offer to save to file
+        filename = "encryption.txt"
+        save = input(f"\nSave encryption results to {filename}? (y/n): ").lower()
+        if save == 'y':
+            with open(filename, 'w') as f:
+                f.write(f"{secret_key}\n")
+                f.write(f"{encrypted}\n")
+                f.write(f"{case_encoded}\n")
+            print(f"Encryption details saved to {filename}")
     
-    # Encrypt the message
-    encrypted, case_encoded = encrypt_playfair(message, matrix, secret_key)
-    
-    # Display the result
-    print("\nEncrypted message:")
-    print(encrypted)
-    
-    print("\nCase information (needed for decryption):")
-    print(case_encoded)
-    
-    # Display the prepared digraphs for clarity
-    digraphs, _ = prepare_message(message)
-    print("\nPassword split into digraphs:")
-    print(' '.join(digraphs))
-    
-    # Save encryption details
-    save = input("\nSave encryption details to file? (y/n): ").lower()
-    if save == 'y':
-        filename = input("Enter filename (default: playfair_encryption.txt): ") or "playfair_encryption.txt"
-        with open(filename, 'w') as f:
-            f.write(f"Secret Key: {secret_key}\n")
-            f.write(f"Construction Method: Plain Traditional\n")
-            f.write(f"Original Message: {message}\n")
-            f.write(f"Encrypted Message: {encrypted}\n")
-            f.write(f"Case Information: {case_encoded}\n")
-            f.write(f"Digraphs: {' '.join(digraphs)}\n")
-            
-            # Find the corresponding encrypted digraphs for display
-            core_encrypted = ''.join([encrypt_digraph(dg[0], dg[1], matrix, []) for dg in digraphs])
-            enc_digraphs = [core_encrypted[i:i+2] for i in range(0, len(core_encrypted), 2)]
-            f.write(f"Encrypted Digraphs: {' '.join(enc_digraphs)}\n")
-            
-        print(f"Encryption details saved to {filename}")
+    except ValueError as e:
+        print(f"\nError: {str(e)}")
 
 if __name__ == "__main__":
     main() 

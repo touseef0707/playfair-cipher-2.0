@@ -306,8 +306,34 @@ def main():
     print("=== Playfair Cipher Decryption for Passwords ===")
     print("Note: This implementation is designed for passwords without spaces.")
     
-    # Get decryption parameters
-    secret_key = input("Enter your secret key: ")
+    # Ask if user wants to use a file for input
+    use_file = input("Use a file for input? (y/n): ").lower() == 'y'
+    
+    if use_file:
+        input_file = input("Enter input filename (default: encryption.txt): ") or "encryption.txt"
+        try:
+            with open(input_file, 'r') as f:
+                lines = f.readlines()
+                if len(lines) >= 3:
+                    secret_key = lines[0].strip()
+                    encrypted = lines[1].strip()
+                    case_encoded = lines[2].strip()
+                else:
+                    print("File does not contain enough information. Using manual input.")
+                    secret_key = input("Enter your secret key: ")
+                    encrypted = input("\nEnter the encrypted message: ")
+                    case_encoded = input("Enter the case information: ")
+        except FileNotFoundError:
+            print(f"File {input_file} not found. Using manual input.")
+            secret_key = input("Enter your secret key: ")
+            encrypted = input("\nEnter the encrypted message: ")
+            case_encoded = input("Enter the case information: ")
+    else:
+        # Get decryption parameters manually
+        secret_key = input("Enter your secret key: ")
+        encrypted = input("\nEnter the encrypted message: ")
+        case_encoded = input("Enter the case information: ")
+    
     matrix_size = 7  # Fixed for this assignment
     
     # Using fixed special characters
@@ -319,28 +345,24 @@ def main():
     print("\nDecryption Matrix (Plain Traditional):")
     methods.print_matrix(matrix)
     
-    # Get encrypted message and metadata
-    encrypted = input("\nEnter the encrypted message: ")
-    case_encoded = input("Enter the case information: ")
+    try:
+        # Decrypt the message
+        decrypted = decrypt_playfair(encrypted, case_encoded, matrix, secret_key)
+        
+        # Display the result
+        print("\nDecrypted message:")
+        print(decrypted)
+        
+        # Save decryption details
+        filename = "decryption.txt"
+        save = input(f"\nSave decrypted message to {filename}? (y/n): ").lower()
+        if save == 'y':
+            with open(filename, 'w') as f:
+                f.write(f"{decrypted}\n")
+            print(f"Decrypted message saved to {filename}")
     
-    # Decrypt the message
-    decrypted = decrypt_playfair(encrypted, case_encoded, matrix, secret_key)
-    
-    # Display the result
-    print("\nDecrypted message:")
-    print(decrypted)
-    
-    # Save decryption details
-    save = input("\nSave decryption details to file? (y/n): ").lower()
-    if save == 'y':
-        filename = input("Enter filename (default: playfair_decryption.txt): ") or "playfair_decryption.txt"
-        with open(filename, 'w') as f:
-            f.write(f"Secret Key: {secret_key}\n")
-            f.write(f"Construction Method: Plain Traditional\n")
-            f.write(f"Encrypted Message: {encrypted}\n")
-            f.write(f"Case Information: {case_encoded}\n")
-            f.write(f"Decrypted Message: {decrypted}\n")
-        print(f"Decryption details saved to {filename}")
+    except ValueError as e:
+        print(f"\nError: {str(e)}")
 
 if __name__ == "__main__":
     main() 
