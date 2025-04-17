@@ -2,7 +2,7 @@
 
 **IMPORTANT NOTE: This implementation is designed specifically for passwords. Messages should NOT contain spaces.**
 
-This project implements the Playfair cipher with several enhancements, including a 7×7 matrix (instead of the traditional 5×5), different matrix construction methods, support for numbers and special characters, and case preservation.
+This project implements the Playfair cipher with several enhancements, including a 7×7 matrix (instead of the traditional 5×5), support for numbers and special characters, and case preservation.
 
 ## Character Restrictions
 
@@ -29,10 +29,7 @@ The program prioritizes including all digits and letters in the matrix, with spe
 - **Fixed Special Characters**: Uses a set of 13 special characters including underscore: `!@#$%^&*()_-+`
 - **Case Preservation**: Maintains the original case of letters during encryption and decryption
 - **Traditional Playfair Behavior**: Uses 'X' as a filler character for repeated letters and odd-length messages
-- **Three Matrix Construction Methods**:
-  - Plain Traditional (PT)
-  - Key-Based Traditional (KBT) 
-  - Spiral Completion (SC)
+- **Plain Traditional Matrix**: Uses the Plain Traditional (PT) method for matrix generation
 
 ## Password Security
 
@@ -46,7 +43,7 @@ This implementation has been extensively tested with a wide range of password ty
 - **Passwords with mixed numbers and special characters** (e.g., "123!@#456")
 - **Complex combinations** of all above elements (e.g., "P@ssW0rd_2023!")
 
-All password types successfully encrypt and decrypt with all three matrix construction methods (Plain Traditional, Key-Based Traditional, and Spiral Completion), proving the robustness of the implementation.
+All password types successfully encrypt and decrypt, proving the robustness of the implementation.
 
 ### Key Implementation Features
 
@@ -55,34 +52,20 @@ All password types successfully encrypt and decrypt with all three matrix constr
 3. **Precise Case Preservation**: Securely encodes and restores the original case of letters
 4. **Password-Focused**: Optimized specifically for password encryption without spaces
 5. **No Hardcoded Pattern Handling**: Relies on clean cipher algorithm implementation
-6. **Comprehensive Testing**: Verified with 20+ password types across all construction methods
+6. **Comprehensive Testing**: Verified with 20+ password types
 
 ## How It Works
 
-### Matrix Construction
+### Matrix Construction (Plain Traditional)
 
-1. **Plain Traditional (PT)**:
-   - Places the secret key (with duplicates removed) first
-   - Fills the remaining cells with unused characters in alphabetic order, followed by numbers and special characters
-   - Fills the matrix row by row, from left to right
+- Places the secret key (with duplicates removed) first
+- Fills the remaining cells with unused characters in alphabetic order, followed by numbers and special characters
+- Fills the matrix row by row, from left to right
 
-2. **Key-Based Traditional (KBT)**:
-   - Places the secret key (with duplicates removed) first
-   - Fills the remaining cells with unused characters in this order: remaining alphabets, special characters, and then digits
-   - Fills the matrix row by row, from left to right, maintaining this specific character ordering priority
+### Matrix Example
 
-3. **Spiral Completion (SC)**:
-   - Places the secret key (with duplicates removed) first
-   - Uses the same character ordering as KBT: remaining alphabets, special characters, then digits
-   - Fills the matrix in a spiral pattern: starting from the top-left, moving right, then down, then left, then up, and continuing inward
+Here is an example of a matrix generated using the key 'P@55W0RD!':
 
-Note: The different character ordering between PT and the other methods (KBT, SC) creates additional variation in the encryption matrices, enhancing security.
-
-### Matrix Examples
-
-Here are examples of matrices generated using the key 'P@55W0RD!' with each construction method:
-
-#### Plain Traditional (PT)
 ```
 P  @  5  W  0  R  D
 !  A  B  C  E  F  G
@@ -92,30 +75,6 @@ Y  Z  1  2  3  4  6
 7  8  9  #  $  %  ^
 &  *  (  )  _  -  +
 ```
-
-#### Key-Based Traditional (KBT)
-```
-P  @  5  W  0  R  D
-!  A  B  C  E  F  G
-H  I  J  K  L  M  N
-O  Q  S  T  U  V  X
-Y  Z  #  $  %  ^  &
-*  (  )  _  -  +  1
-2  3  4  6  7  8  9
-```
-
-#### Spiral Completion (SC)
-```
-P  @  5  W  0  R  D
-S  T  U  V  X  Y  !
-Q  -  +  1  2  Z  A
-O  _  8  9  3  #  B
-N  )  7  6  4  $  C
-M  (  *  &  ^  %  E
-L  K  J  I  H  G  F
-```
-
-Note how PT places digits before special characters, while both KBT and SC place special characters before digits. Additionally, SC fills the matrix in a spiral pattern rather than row by row.
 
 ### Encryption Process
 
@@ -157,29 +116,6 @@ Note how PT places digits before special characters, while both KBT and SC place
 | Matrix size | 5×5 (25 characters) | 7×7 (49 characters) | Increases keyspace by approximately 10^38 times |
 | Character set | 26 letters (I/J combined) | 26 letters + 10 digits + 13 special chars | Allows encryption of modern passwords and sensitive data containing numbers and symbols |
 | Case sensitivity | None (all uppercase) | Full preservation | Doubles the effective entropy of alphabetic characters |
-| Construction methods | 1 method | 3 distinct methods | Adds an additional layer of complexity, effectively multiplying the keyspace by 3 |
-
-### Complexity Analysis of Matrix Construction Methods
-
-Each matrix construction method adds its own layer of complexity, making cryptanalysis more difficult:
-
-1. **Plain Traditional (PT)**:
-   - **Complexity**: O(n), where n is the matrix size (7×7=49)
-   - **Security Contribution**: Provides the baseline security for the enhanced Playfair
-   - **Keyspace**: Approximately 10^62 possible matrices
-   - **Cryptanalysis Resistance**: Moderate - follows a predictable pattern once the key is known
-
-2. **Key-Based Traditional (KBT)**:
-   - **Complexity**: O(n), but with key-based starting position
-   - **Security Contribution**: Adds unpredictability through variable starting position
-   - **Keyspace**: Approximately 10^62 × 49 (starting positions) possible matrices
-   - **Cryptanalysis Resistance**: High - requires knowledge of both key and starting position
-
-3. **Spiral Completion (SC)**:
-   - **Complexity**: O(n), with spiral filling pattern
-   - **Security Contribution**: Makes the relationship between adjacent characters highly non-linear
-   - **Keyspace**: Approximately 10^62 possible matrices, but with dramatically different character proximity
-   - **Cryptanalysis Resistance**: Very High - disrupts frequency analysis and digraph statistics
 
 ### Quantitative Security Improvements
 
@@ -195,18 +131,8 @@ Each matrix construction method adds its own layer of complexity, making cryptan
 
 3. **Brute Force Attack Resistance**:
    - Traditional Playfair with known matrix construction: 25! trials
-   - Enhanced Playfair with unknown construction method: 3 × 49! trials
-   - **Improvement Factor**: 3 × 10^37 ≈ 10^38 times more trials required
-
-### Construction Method Effects on Frequency Analysis
-
-Frequency analysis is a common technique used to break classical ciphers by exploiting the predictable frequency distributions of letters in natural language. Our enhanced Playfair cipher disrupts this approach through its construction methods:
-
-- **PT**: By expanding the character set to 49, each character's frequency is diluted, making statistical patterns harder to recognize.
-  
-- **KBT**: Different starting positions based on the key create fundamentally different matrices even with similar keys, disrupting the expected positional relationships between characters.
-  
-- **SC**: The spiral pattern creates a non-linear relationship between character positions, significantly distorting expected digraph frequencies.
+   - Enhanced Playfair: 49! trials
+   - **Improvement Factor**: 10^37 times more trials required
 
 ### Big O Notation Complexity Analysis
 
@@ -217,8 +143,6 @@ The Big O notation provides a formal way to express the upper bound of the algor
 | Method | Time Complexity | Space Complexity | Notes |
 |--------|-----------------|------------------|-------|
 | Plain Traditional (PT) | O(n²) | O(n²) | Where n is the matrix dimension (7 in our case). Time complexity comes from filling each cell in the n×n matrix. |
-| Key-Based Traditional (KBT) | O(n²) | O(n²) | Same asymptotic complexity as PT, but with added computational steps to determine starting position. |
-| Spiral Completion (SC) | O(n²) | O(n²) | Requires additional boundary tracking for the spiral pattern, but maintains the same asymptotic complexity. |
 
 #### Encryption/Decryption Process Complexity
 
@@ -259,24 +183,23 @@ The complexity improvements are particularly significant for cryptanalysis resis
 
 1. **Brute Force**:
    - Traditional: O(25!) ≈ O(10^25) operations
-   - Enhanced: O(3 × 49!) ≈ O(10^63) operations
-   - Computational infeasibility increased by factor of 10^38
+   - Enhanced: O(49!) ≈ O(10^62) operations
+   - Computational infeasibility increased by factor of 10^37
 
 2. **Frequency Analysis**:
    - Traditional: O(26 × m) operations to analyze letter frequencies
    - Enhanced: O(49 × m) operations, but with dramatically reduced effectiveness due to:
      - Expanded character set diluting statistical patterns
-     - Multiple construction methods creating varied character relationships
      - Case preservation doubling the effective character set
 
 3. **Known Plaintext Attack**:
    - Traditional: O(25²) possible digraph mappings to check
-   - Enhanced: O(49²) possible digraph mappings, multiplied by 3 possible construction methods
-   - Computational complexity increased by factor of 3 × (49/25)² ≈ 11.5
+   - Enhanced: O(49²) possible digraph mappings
+   - Computational complexity increased by factor of (49/25)² ≈ 3.84
 
 In summary, while the asymptotic complexity of the core operations remains the same (O(n²) for matrix creation, O(m×n²) for encryption/decryption), the enhanced implementation dramatically increases the cryptanalytic security by expanding the keyspace and disrupting statistical patterns, all while maintaining reasonable computational efficiency for legitimate encryption and decryption operations.
 
-By combining a larger matrix, multiple construction methods, expanded character set, and case preservation, our enhanced Playfair system provides exponentially greater security while maintaining the elegant simplicity of the original cipher algorithm.
+By combining a larger matrix, expanded character set, and case preservation, our enhanced Playfair system provides exponentially greater security while maintaining the elegant simplicity of the original cipher algorithm.
 
 ## Efficiency for Password Encryption
 
@@ -300,7 +223,7 @@ Despite its enhanced security, our implementation remains computationally lightw
 
 Several features make this implementation ideal for password encryption:
 - **Fixed Output Length**: The encrypted output maintains a predictable length relationship with the input, consuming approximately the same storage space as the original password
-- **Deterministic Algorithm**: The same password consistently encrypts to the same output given the same key and method
+- **Deterministic Algorithm**: The same password consistently encrypts to the same output given the same key
 - **Fast Verification**: Decryption is computationally equivalent to encryption, allowing rapid password verification
 - **No Hash Collisions**: Unlike hashing algorithms, our cipher produces unique outputs for each unique input
 
@@ -309,7 +232,7 @@ Several features make this implementation ideal for password encryption:
 The enhanced Playfair cipher addresses weaknesses that specifically impact password security:
 - **Dictionary Attacks**: The expanded character set and case preservation dramatically increase the effective password space
 - **Rainbow Table Attacks**: The key-dependent matrix construction acts as an implicit "salt," making precomputed tables impractical
-- **Brute Force Optimization**: The multiple construction methods prevent optimization techniques commonly used to accelerate brute force attacks on passwords
+- **Brute Force Attacks**: The 7×7 matrix significantly increases the keyspace, making brute force attacks computationally infeasible
 
 ### 5. Performance Benchmarks
 
@@ -332,10 +255,10 @@ While we recommend using standard password hashing functions (bcrypt, Argon2, et
 
 ## Files
 
-- `methods.py`: Contains the three matrix construction methods
+- `methods.py`: Contains the matrix construction method (Plain Traditional)
 - `playfair_encrypt.py`: Implements the Playfair encryption algorithm
 - `playfair_decrypt.py`: Implements the Playfair decryption algorithm
-- `test.py`: Test suite for the Playfair cipher implementation
+- `test_fixed.py`: Test suite for the Playfair cipher implementation
 
 ## Usage
 
@@ -347,8 +270,7 @@ python playfair_encrypt.py
 
 Follow the prompts to:
 1. Enter your secret key
-2. Select a matrix construction method
-3. Enter the password to encrypt
+2. Enter the password to encrypt
 
 The program will display:
 - The encryption matrix
@@ -365,19 +287,18 @@ python playfair_decrypt.py
 
 Follow the prompts to:
 1. Enter the secret key (must match the one used for encryption)
-2. Select the matrix construction method (must match the one used for encryption)
-3. Enter the encrypted password
-4. Enter the case information
+2. Enter the encrypted password
+3. Enter the case information
 
 The program will display the decrypted password.
 
 ### Testing
 
 ```
-python test.py
+python test_fixed.py
 ```
 
-Runs a test suite with predefined passwords, secret keys, and matrix construction methods to verify the correctness of the implementation.
+Runs a test suite with predefined passwords and secret keys to verify the correctness of the implementation.
 
 ```
 python password_test.py
@@ -385,7 +306,6 @@ python password_test.py
 
 Runs comprehensive password encryption/decryption tests including:
 - 20+ diverse password patterns with varying complexity
-- Tests across all three matrix construction methods
 - Multiple encryption keys for thorough verification
 - Detailed reporting of success rates and any failures
 
@@ -395,4 +315,4 @@ The comprehensive test suite validates:
 - Proper handling of special characters
 - Correct encryption/decryption of very short and very long passwords
 
-**Test Results**: All 20 test passwords encrypt and decrypt successfully with all three matrix construction methods (PT, KBT, and SC), demonstrating the robust nature of this implementation for password security. 
+**Test Results**: All 20 test passwords encrypt and decrypt successfully, demonstrating the robust nature of this implementation for password security. 

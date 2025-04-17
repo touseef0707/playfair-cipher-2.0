@@ -1,184 +1,147 @@
-import sys
+import os
 import methods
 import playfair_encrypt
 import playfair_decrypt
 
-def print_banner():
-    """Print a banner with program information"""
-    print("\n" + "=" * 80)
-    print("PLAYFAIR CIPHER - PASSWORD ENCRYPTION".center(80))
-    print("=" * 80)
-    print("\nThis program implements an enhanced Playfair cipher for password encryption.")
-    print("It uses a 7×7 matrix that includes letters, numbers, and special characters.\n")
-    
-    print("CHARACTER RESTRICTIONS:".center(80))
-    print("-" * 80)
-    print("Only the following characters are allowed:")
-    print("- Letters (A-Z, a-z)")
-    print("- Numbers (0-9)")
-    print("- Special characters: !@#$%^&*()_+-{}")
-    print("\nNOTE: Spaces are not supported and will be removed during encryption.\n")
-    
-    print("MATRIX INFORMATION:".center(80))
-    print("-" * 80)
-    print("The 7×7 matrix will always include:")
-    print("- All 26 uppercase letters")
-    print("- All 10 digits (0-9)")
-    print("- Exactly 13 special characters: !@#$%^&*()_-+")
-    print("\nThe matrix prioritizes including all digits and letters.\n")
-    print("=" * 80 + "\n")
+def clear_screen():
+    """Clear the terminal screen"""
+    os.system('cls' if os.name == 'nt' else 'clear')
 
 def encrypt_mode():
-    """Run the program in encryption mode"""
-    print("\n--- ENCRYPTION MODE ---\n")
+    """Run the encryption mode"""
+    clear_screen()
+    print("=== Playfair Cipher Encryption for Passwords ===")
+    print("Note: This implementation is designed for passwords without spaces.")
     
-    # Get the key and validate it
-    while True:
-        key = input("Enter your secret key: ")
-        is_valid, error_msg = methods.validate_input(key, is_key=True)
-        if is_valid:
-            break
-        print(f"Error: {error_msg}")
-        print("Please try again.\n")
+    # Get encryption parameters
+    secret_key = input("Enter your secret key: ")
+    matrix_size = 7  # Fixed for this assignment
     
-    # Choose matrix construction method
-    print("\nSelect matrix construction method:")
-    print("1 - Plain Traditional")
-    print("2 - Key-Based Traditional")
-    print("3 - Spiral Completion")
+    # Using fixed special characters
+    special_chars = methods.DEFAULT_SPECIAL_CHARS
+    print(f"Using fixed special characters: {special_chars}")
     
-    while True:
-        method = input("Method (1/2/3): ")
-        if method in ["1", "2", "3"]:
-            break
-        print("Invalid choice. Please enter 1, 2, or 3.")
-    
-    method_num = int(method)
-    
-    # Generate matrix
-    if method_num == 1:
-        matrix = methods.PT(key, 7)
-        method_name = "Plain Traditional"
-    elif method_num == 2:
-        matrix = methods.KBT(key, 7)
-        method_name = "Key-Based Traditional"
-    else:
-        matrix = methods.SC(key, 7)
-        method_name = "Spiral Completion"
-    
-    # Get the message to encrypt
-    while True:
-        plaintext = input("\nEnter the message to encrypt: ")
-        is_valid, error_msg = methods.validate_input(plaintext, is_key=False)
-        if is_valid:
-            if error_msg:  # This would be the space warning
-                print(error_msg)
-            break
-        print(f"Error: {error_msg}")
-        print("Please try again.\n")
-    
-    # Display the matrix
-    print("\nUsing matrix ({}):".format(method_name))
+    # Generate the matrix (Plain Traditional)
+    matrix = methods.PT(secret_key, matrix_size, special_chars)
+    print("\nEncryption Matrix (Plain Traditional):")
     methods.print_matrix(matrix)
     
-    # Encrypt
+    # Get message to encrypt
+    message = input("\nEnter the password to encrypt: ")
+    
     try:
-        encrypted, case_info = playfair_encrypt.encrypt_playfair(plaintext, matrix)
-        print("\nEncrypted message: {}".format(encrypted))
-        print("Case information: {}".format(case_info))
-        print("\nSTORE BOTH THE ENCRYPTED MESSAGE AND CASE INFORMATION!")
-        print("You will need both to decrypt the message correctly.")
-    except Exception as e:
-        print(f"\nError during encryption: {str(e)}")
+        # Encrypt the message
+        encrypted, case_encoded = playfair_encrypt.encrypt_playfair(message, matrix, secret_key)
+        
+        # Display the result
+        print("\nEncrypted message:")
+        print(encrypted)
+        
+        print("\nCase information (needed for decryption):")
+        print(case_encoded)
+        
+        # Display the prepared digraphs for clarity
+        digraphs, _ = playfair_encrypt.prepare_message(message)
+        print("\nPassword split into digraphs:")
+        print(' '.join(digraphs))
+        
+        # Option to save to file
+        save = input("\nSave encryption details to file? (y/n): ").lower()
+        if save == 'y':
+            filename = input("Enter filename (default: playfair_encryption.txt): ") or "playfair_encryption.txt"
+            with open(filename, 'w') as f:
+                f.write(f"Secret Key: {secret_key}\n")
+                f.write(f"Construction Method: Plain Traditional\n")
+                f.write(f"Original Message: {message}\n")
+                f.write(f"Encrypted Message: {encrypted}\n")
+                f.write(f"Case Information: {case_encoded}\n")
+                f.write(f"Digraphs: {' '.join(digraphs)}\n")
+                
+                # Get the core encrypted digraphs (before transformation)
+                matrix_flat = [char for row in matrix for char in row]
+                core_pairs = []
+                for dg in digraphs:
+                    c1, c2 = dg[0], dg[1]
+                    encrypted_pair = playfair_encrypt.encrypt_digraph(c1, c2, matrix, matrix_flat)
+                    core_pairs.append(encrypted_pair)
+                core_encrypted = ''.join(core_pairs)
+                enc_digraphs = [core_encrypted[i:i+2] for i in range(0, len(core_encrypted), 2)]
+                f.write(f"Encrypted Digraphs: {' '.join(enc_digraphs)}\n")
+                
+            print(f"Encryption details saved to {filename}")
+    
+    except ValueError as e:
+        print(f"\nError: {str(e)}")
 
 def decrypt_mode():
-    """Run the program in decryption mode"""
-    print("\n--- DECRYPTION MODE ---\n")
+    """Run the decryption mode"""
+    clear_screen()
+    print("=== Playfair Cipher Decryption for Passwords ===")
+    print("Note: This implementation is designed for passwords without spaces.")
     
-    # Get the key and validate it
-    while True:
-        key = input("Enter your secret key: ")
-        is_valid, error_msg = methods.validate_input(key, is_key=True)
-        if is_valid:
-            break
-        print(f"Error: {error_msg}")
-        print("Please try again.\n")
+    # Get decryption parameters
+    secret_key = input("Enter your secret key: ")
+    matrix_size = 7  # Fixed for this assignment
     
-    # Choose matrix construction method
-    print("\nSelect matrix construction method:")
-    print("1 - Plain Traditional")
-    print("2 - Key-Based Traditional")
-    print("3 - Spiral Completion")
+    # Using fixed special characters
+    special_chars = methods.DEFAULT_SPECIAL_CHARS
+    print(f"Using fixed special characters: {special_chars}")
     
-    while True:
-        method = input("Method (1/2/3): ")
-        if method in ["1", "2", "3"]:
-            break
-        print("Invalid choice. Please enter 1, 2, or 3.")
-    
-    method_num = int(method)
-    
-    # Generate matrix
-    if method_num == 1:
-        matrix = methods.PT(key, 7)
-        method_name = "Plain Traditional"
-    elif method_num == 2:
-        matrix = methods.KBT(key, 7)
-        method_name = "Key-Based Traditional"
-    else:
-        matrix = methods.SC(key, 7)
-        method_name = "Spiral Completion"
-    
-    # Get the encrypted message
-    while True:
-        encrypted = input("\nEnter the encrypted message: ")
-        is_valid, error_msg = methods.validate_input(encrypted, is_key=False)
-        if is_valid:
-            break
-        print(f"Error: {error_msg}")
-        print("Please try again.\n")
-    
-    # Get case information
-    case_info = input("Enter the case information: ")
-    
-    # Display the matrix
-    print("\nUsing matrix ({}):".format(method_name))
+    # Generate the matrix (Plain Traditional)
+    matrix = methods.PT(secret_key, matrix_size, special_chars)
+    print("\nDecryption Matrix (Plain Traditional):")
     methods.print_matrix(matrix)
     
-    # Decrypt
+    # Get encrypted message and metadata
+    encrypted = input("\nEnter the encrypted message: ")
+    case_encoded = input("Enter the case information: ")
+    
     try:
-        decrypted = playfair_decrypt.decrypt_playfair(encrypted, case_info, matrix)
-        print("\nDecrypted message: {}".format(decrypted))
-    except Exception as e:
-        print(f"\nError during decryption: {str(e)}")
+        # Decrypt the message
+        decrypted = playfair_decrypt.decrypt_playfair(encrypted, case_encoded, matrix, secret_key)
+        
+        # Display the result
+        print("\nDecrypted message:")
+        print(decrypted)
+        
+        # Option to save to file
+        save = input("\nSave decryption details to file? (y/n): ").lower()
+        if save == 'y':
+            filename = input("Enter filename (default: playfair_decryption.txt): ") or "playfair_decryption.txt"
+            with open(filename, 'w') as f:
+                f.write(f"Secret Key: {secret_key}\n")
+                f.write(f"Construction Method: Plain Traditional\n")
+                f.write(f"Encrypted Message: {encrypted}\n")
+                f.write(f"Case Information: {case_encoded}\n")
+                f.write(f"Decrypted Message: {decrypted}\n")
+            print(f"Decryption details saved to {filename}")
+    
+    except ValueError as e:
+        print(f"\nError: {str(e)}")
 
 def main():
-    """Main function"""
-    print_banner()
-    
-    print("Choose operation mode:")
-    print("1 - Encrypt a message")
-    print("2 - Decrypt a message")
-    print("3 - Exit")
-    
+    """Main function for the Playfair cipher program"""
     while True:
+        clear_screen()
+        print("=== Playfair Cipher Implementation ===")
+        print("1. Encrypt a password")
+        print("2. Decrypt a password")
+        print("3. Exit")
+        
         choice = input("\nEnter your choice (1/2/3): ")
         
-        if choice == "1":
+        if choice == '1':
             encrypt_mode()
-        elif choice == "2":
+            input("\nPress Enter to continue...")
+        elif choice == '2':
             decrypt_mode()
-        elif choice == "3":
-            print("Exiting program. Goodbye!")
-            sys.exit(0)
-        else:
-            print("Invalid choice. Please enter 1, 2, or 3.")
-        
-        # Ask if the user wants to perform another operation
-        again = input("\nWould you like to perform another operation? (y/n): ")
-        if again.lower() != "y":
+            input("\nPress Enter to continue...")
+        elif choice == '3':
             print("Exiting program. Goodbye!")
             break
+        else:
+            print("Invalid choice. Please enter 1, 2, or 3.")
+            input("\nPress Enter to continue...")
 
 if __name__ == "__main__":
     main() 

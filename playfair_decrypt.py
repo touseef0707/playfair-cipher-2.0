@@ -17,9 +17,184 @@ def find_position(matrix, char):
                 return (i, j)
     return None
 
-def decrypt_playfair(encrypted, case_encoded, matrix):
+def decrypt_digraph(e1, e2, matrix):
     """
-    Decrypts a message using the Playfair cipher.
+    Decrypt a single digraph (pair of characters) using Playfair cipher rules
+    
+    Args:
+        e1: First encrypted character
+        e2: Second encrypted character
+        matrix: The decryption matrix
+    
+    Returns:
+        The decrypted character pair
+    """
+    # Find positions of encrypted characters
+    pos1 = find_position(matrix, e1)
+    pos2 = find_position(matrix, e2)
+    
+    # If either character is not in the matrix, return a placeholder
+    if pos1 is None or pos2 is None:
+        return "??"
+    
+    i1, j1 = pos1
+    i2, j2 = pos2
+    matrix_size = len(matrix)
+    
+    # Apply the appropriate decryption rule based on character positions
+    if i1 == i2:  # Same row rule - shift 2 steps up
+        # Move two positions up (with wrapping)
+        decrypted_pair = (
+            matrix[(i1 - 2) % matrix_size][j1] + 
+            matrix[(i2 - 2) % matrix_size][j2]
+        )
+    elif j1 == j2:  # Same column rule - shift 3 steps left
+        # Move three positions left (with wrapping)
+        decrypted_pair = (
+            matrix[i1][(j1 - 3) % matrix_size] + 
+            matrix[i2][(j2 - 3) % matrix_size]
+        )
+    else:  # Rectangle rule
+        # For rectangle rule, we swap columns (same for encryption and decryption)
+        decrypted_pair = (
+            matrix[i1][j2] + 
+            matrix[i2][j1]
+        )
+    
+    return decrypted_pair
+
+def generate_key_values(secret_key):
+    """
+    Generate a sequence of numbers from the secret key without using hash functions
+    
+    Args:
+        secret_key: The secret key
+    
+    Returns:
+        List of integers derived from the key
+    """
+    # Convert each character to its ASCII value
+    key_values = [ord(c) for c in secret_key]
+    
+    # Extend the key values to make it more complex
+    extended_values = []
+    sum_so_far = 0
+    
+    for i, val in enumerate(key_values):
+        sum_so_far = (sum_so_far + val) % 256
+        product = (val * (i + 1)) % 256
+        extended_values.append(sum_so_far)
+        extended_values.append(product)
+    
+    return extended_values
+
+def reverse_ascii_transform(text, secret_key):
+    """
+    Reverse the ASCII-based transformation using the secret key
+    
+    Args:
+        text: The transformed text
+        secret_key: The secret key used for the transformation
+    
+    Returns:
+        Original text
+    """
+    # Define allowed characters
+    valid_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-{}"
+    valid_chars_list = list(valid_chars)
+    
+    # Generate a sequence of numbers from the secret key
+    key_values = generate_key_values(secret_key)
+    
+    # Apply the reverse transformation
+    result = []
+    for i, char in enumerate(text):
+        # Get the key value for this position (cycling through key values)
+        key_val = key_values[i % len(key_values)]
+        
+        # Reverse transform character within valid character set
+        if char in valid_chars_list:
+            original_index = valid_chars_list.index(char)
+            new_index = (original_index - key_val) % len(valid_chars_list)
+            new_char = valid_chars_list[new_index]
+            result.append(new_char)
+        else:
+            # If the character isn't in our valid set, keep it as is (shouldn't happen)
+            result.append(char)
+    
+    return ''.join(result)
+
+def generate_shuffle_indices(shuffle_key, length):
+    """
+    Generate shuffling indices based on the shuffle key
+    
+    Args:
+        shuffle_key: The key to use for shuffling
+        length: The length of the text to shuffle
+    
+    Returns:
+        A list of indices for shuffling
+    """
+    # Convert the shuffle key to a list of integers
+    if len(shuffle_key) == 0:
+        return list(range(length))
+        
+    # Convert shuffle key chars to values
+    key_values = []
+    for c in shuffle_key:
+        # Convert to a value between 0-15
+        if c.isdigit():
+            key_values.append(int(c))
+        elif 'A' <= c <= 'F' or 'a' <= c <= 'f':
+            key_values.append(10 + ord(c.upper()) - ord('A'))
+        else:
+            key_values.append(ord(c) % 16)
+    
+    # Generate indices
+    indices = list(range(length))
+    
+    # Shuffle the indices using Fisher-Yates algorithm with the key values
+    for i in range(length - 1, 0, -1):
+        # Use key_values to determine the swap index
+        j = key_values[i % len(key_values)] % (i + 1)
+        # Swap indices[i] and indices[j]
+        indices[i], indices[j] = indices[j], indices[i]
+    
+    return indices
+
+def unshuffle_text(text, shuffle_key):
+    """
+    Reverse the shuffling of text using the provided shuffle key
+    
+    Args:
+        text: The shuffled text
+        shuffle_key: The key used for shuffling
+    
+    Returns:
+        Unshuffled text
+    """
+    if not text:
+        return ""
+        
+    # Generate shuffling indices
+    indices = generate_shuffle_indices(shuffle_key, len(text))
+    
+    # Create a mapping from new positions to original positions
+    position_map = {}
+    for new_pos, old_pos in enumerate(indices):
+        position_map[new_pos] = old_pos
+    
+    # Apply the unshuffling
+    unshuffled = [''] * len(text)
+    for new_pos, char in enumerate(text):
+        old_pos = position_map[new_pos]
+        unshuffled[old_pos] = char
+    
+    return ''.join(unshuffled)
+
+def decrypt_playfair(encrypted, case_encoded, matrix, secret_key):
+    """
+    Decrypts a message using the Playfair cipher with modified rules.
     
     IMPORTANT: This implementation is designed for passwords.
     - Does not handle spaces (passwords typically don't have spaces)
@@ -28,8 +203,9 @@ def decrypt_playfair(encrypted, case_encoded, matrix):
     
     Args:
         encrypted: The encrypted message
-        case_encoded: Encoded case information
+        case_encoded: Encoded case information (with shuffle method prefix)
         matrix: The decryption matrix
+        secret_key: The secret key used for encryption
     
     Returns:
         Decrypted message with original case restored
@@ -40,45 +216,31 @@ def decrypt_playfair(encrypted, case_encoded, matrix):
         if char not in valid_chars:
             raise ValueError(f"Invalid character '{char}' in encrypted text. Only letters, numbers, and these special characters are allowed: !@#$%^&*()_+-{{}}")
     
+    # Determine shuffle key based on case_encoded
+    if case_encoded:
+        # Case information is available, use it as the shuffle key
+        shuffle_key = case_encoded
+    else:
+        # No case information, use a sequence derived from the secret key
+        key_values = generate_key_values(secret_key)
+        shuffle_key = ''.join([format(v % 16, 'x') for v in key_values])
+    
+    # Unshuffle the text
+    unshuffled = unshuffle_text(encrypted, shuffle_key)
+    
+    # Reverse the ASCII transformation
+    transformed = reverse_ascii_transform(unshuffled, secret_key)
+    
     # Split into digraphs
-    digraphs = [encrypted[i:i+2] for i in range(0, len(encrypted), 2)]
+    digraphs = [transformed[i:i+2] for i in range(0, len(transformed), 2)]
     
     # Decrypt each pair
     decrypted_pairs = []
-    matrix_size = len(matrix)
     
-    for pair in digraphs:
-        # Find positions of both characters
-        pos1 = find_position(matrix, pair[0])
-        pos2 = find_position(matrix, pair[1])
-        
-        # If either character is not in the matrix, use placeholder
-        if pos1 is None or pos2 is None:
-            decrypted_pairs.append("??")
-            continue
-            
-        row1, col1 = pos1
-        row2, col2 = pos2
-        
-        # Apply Playfair decryption rules (reverse of encryption)
-        if row1 == row2:  # Same row
-            # Move one position to the left (with wrapping)
-            decrypted_pairs.append(
-                matrix[row1][(col1 - 1) % matrix_size] + 
-                matrix[row2][(col2 - 1) % matrix_size]
-            )
-        elif col1 == col2:  # Same column
-            # Move one position up (with wrapping)
-            decrypted_pairs.append(
-                matrix[(row1 - 1) % matrix_size][col1] + 
-                matrix[(row2 - 1) % matrix_size][col2]
-            )
-        else:  # Rectangle
-            # Swap columns
-            decrypted_pairs.append(
-                matrix[row1][col2] + 
-                matrix[row2][col1]
-            )
+    for dg in digraphs:
+        e1, e2 = dg[0], dg[1]
+        decrypted_pair = decrypt_digraph(e1, e2, matrix)
+        decrypted_pairs.append(decrypted_pair)
     
     # Join the decrypted pairs
     decrypted = ''.join(decrypted_pairs)
@@ -152,25 +314,9 @@ def main():
     special_chars = methods.DEFAULT_SPECIAL_CHARS
     print(f"Using fixed special characters: {special_chars}")
     
-    print("\nSelect matrix construction method:")
-    print("1 - Plain Traditional")
-    print("2 - Key-Based Traditional")
-    print("3 - Spiral Completion")
-    method = input("Method (1/2/3): ")
-    
-    # Generate the matrix
-    if method == "1":
-        matrix = methods.PT(secret_key, matrix_size, special_chars)
-    elif method == "2":
-        matrix = methods.KBT(secret_key, matrix_size, special_chars)
-    elif method == "3":
-        matrix = methods.SC(secret_key, matrix_size, special_chars)
-    else:
-        print("Invalid method. Using Plain Traditional as default.")
-        matrix = methods.PT(secret_key, matrix_size, special_chars)
-    
-    # Display the matrix
-    print("\nDecryption Matrix:")
+    # Generate the matrix (Plain Traditional only)
+    matrix = methods.PT(secret_key, matrix_size, special_chars)
+    print("\nDecryption Matrix (Plain Traditional):")
     methods.print_matrix(matrix)
     
     # Get encrypted message and metadata
@@ -178,7 +324,7 @@ def main():
     case_encoded = input("Enter the case information: ")
     
     # Decrypt the message
-    decrypted = decrypt_playfair(encrypted, case_encoded, matrix)
+    decrypted = decrypt_playfair(encrypted, case_encoded, matrix, secret_key)
     
     # Display the result
     print("\nDecrypted message:")
@@ -190,13 +336,7 @@ def main():
         filename = input("Enter filename (default: playfair_decryption.txt): ") or "playfair_decryption.txt"
         with open(filename, 'w') as f:
             f.write(f"Secret Key: {secret_key}\n")
-            method_name = {
-                "1": "Plain Traditional",
-                "2": "Key-Based Traditional",
-                "3": "Spiral Completion"
-            }.get(method, "Plain Traditional")
-            f.write(f"Construction Method: {method_name}\n")
-            f.write(f"Special Characters: {special_chars}\n")
+            f.write(f"Construction Method: Plain Traditional\n")
             f.write(f"Encrypted Message: {encrypted}\n")
             f.write(f"Case Information: {case_encoded}\n")
             f.write(f"Decrypted Message: {decrypted}\n")
