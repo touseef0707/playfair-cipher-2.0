@@ -1,4 +1,5 @@
 import methods
+from prettytable import PrettyTable
 
 def find_position(matrix, char):
     """
@@ -65,7 +66,7 @@ def decrypt_digraph(e1, e2, matrix):
 
 def generate_key_values(secret_key):
     """
-    Generate a sequence of numbers from the secret key without using hash functions
+    Generate a sequence of numbers from the secret key
     
     Args:
         secret_key: The secret key
@@ -162,13 +163,14 @@ def generate_shuffle_indices(shuffle_key, length):
     
     return indices
 
-def unshuffle_text(text, shuffle_key):
+def unshuffle_text(text, shuffle_key, show_visualization=False):
     """
     Reverse the shuffling of text using the provided shuffle key
     
     Args:
         text: The shuffled text
         shuffle_key: The key used for shuffling
+        show_visualization: Whether to show visualization table
     
     Returns:
         Unshuffled text
@@ -190,9 +192,116 @@ def unshuffle_text(text, shuffle_key):
         old_pos = position_map[new_pos]
         unshuffled[old_pos] = char
     
+    # Show visualization if requested
+    if show_visualization:
+        # First, show how the key is used to generate indices
+        key_table = PrettyTable()
+        key_table.field_names = ["Shuffle Key", "To Key Values"]
+        
+        # Convert shuffle key chars to values for visualization
+        key_values = []
+        key_value_details = []
+        for c in shuffle_key:
+            if c.isdigit():
+                key_values.append(int(c))
+                key_value_details.append(f"{c} -> {int(c)}")
+            elif 'A' <= c.upper() <= 'F':
+                val = 10 + ord(c.upper()) - ord('A')
+                key_values.append(val)
+                key_value_details.append(f"{c} -> {val} (hex)")
+            else:
+                val = ord(c) % 16
+                key_values.append(val)
+                key_value_details.append(f"{c} -> {val} (ord % 16)")
+        
+        key_table.add_row([shuffle_key, " | ".join(key_value_details)])
+        print("\nShuffle Key Interpretation:")
+        print(key_table)
+        
+        # Next, show all Fisher-Yates algorithm steps
+        fisher_table = PrettyTable()
+        fisher_table.field_names = ["Step", "i", "j = key_values[i % len] % (i+1)", "Swap indices[i] & indices[j]", "Result"]
+        
+        # Recreate the Fisher-Yates steps
+        indices_steps = list(range(len(text)))
+        for i in range(len(text) - 1, 0, -1):
+            j = key_values[i % len(key_values)] % (i + 1)
+            indices_steps[i], indices_steps[j] = indices_steps[j], indices_steps[i]
+            
+            # Show every step of the algorithm
+            fisher_table.add_row([
+                f"{len(text) - i}/{len(text) - 1}",
+                i,
+                f"{key_values[i % len(key_values)]} % {i+1} = {j}",
+                f"Swap indices[{i}]={indices_steps[i]} & indices[{j}]={indices_steps[j]}",
+                str(indices_steps)
+            ])
+        
+        print("\nKey Indices Generation (Fisher-Yates Algorithm):")
+        print("(Showing all permutation steps)")
+        print(fisher_table)
+        
+        # Show how the final indices array maps to actual positions
+        indices_table = PrettyTable()
+        indices_table.field_names = ["Index Position", "Value in indices[]", "Meaning"]
+        
+        for i, idx in enumerate(indices):
+            indices_table.add_row([
+                i,
+                idx,
+                f"Character at original position {idx} moves to position {i} during shuffling"
+            ])
+        
+        print("\nFinal Indices Array Interpretation:")
+        print("indices[] = " + str(indices))
+        print("This array shows how characters were rearranged during shuffling:")
+        print(indices_table)
+        
+        # Explain how position_map is derived from indices
+        print("\nCreating position_map from indices for unshuffling:")
+        print("For unshuffling, we swap key and value to reverse the mapping:")
+        for new_pos in range(len(text)):
+            old_pos = position_map[new_pos]
+            print(f"position_map[{new_pos}] = {old_pos} -> Character at shuffled position {new_pos} goes back to original position {old_pos}")
+        
+        # Show the mapping table
+        mapping_table = PrettyTable()
+        mapping_table.field_names = ["Current Pos", "Character", "Original Pos", "In Unshuffled Output", "Derived From"]
+        
+        # Show all characters
+        for i in range(len(text)):
+            orig_pos = position_map[i]
+            mapping_table.add_row([
+                i,
+                text[i],
+                orig_pos,
+                f"unshuffled[{orig_pos}] = '{text[i]}'",
+                f"position_map[{i}] = {orig_pos}"
+            ])
+        
+        print("\nUnshuffling Process:")
+        print(f"Shuffle Key: '{shuffle_key}'")
+        print(mapping_table)
+        
+        # Add a comprehensive index mapping table
+        index_map_table = PrettyTable()
+        index_map_table.field_names = ["Shuffled Text", "Shuffled Indices", "Original Indices", "Unshuffled Text"]
+        
+        # Display the text and its indices side by side
+        index_map_table.add_row([
+            text,
+            " ".join([str(i) for i in range(len(text))]),
+            " ".join([str(position_map[i]) for i in range(len(text))]),
+            "".join(unshuffled)
+        ])
+        
+        print("\nComprehensive Position Mapping:")
+        print("This shows how positions in the shuffled text map back to original positions")
+        print(index_map_table)
+    
     return ''.join(unshuffled)
 
-def decrypt_playfair(encrypted, case_encoded, matrix, secret_key):
+def decrypt_playfair(encrypted, case_encoded, matrix, secret_key, show_visualization=False):
     """
     Decrypts a message using the Playfair cipher with modified rules.
     
@@ -206,6 +315,7 @@ def decrypt_playfair(encrypted, case_encoded, matrix, secret_key):
         case_encoded: Encoded case information (with shuffle method prefix)
         matrix: The decryption matrix
         secret_key: The secret key used for encryption
+        show_visualization: Whether to show visualization tables
     
     Returns:
         Decrypted message with original case restored
@@ -225,14 +335,27 @@ def decrypt_playfair(encrypted, case_encoded, matrix, secret_key):
         key_values = generate_key_values(secret_key)
         shuffle_key = ''.join([format(v % 16, 'x') for v in key_values])
     
+    if show_visualization:
+        print("-"*70)
+        print("shuffle_key: ", shuffle_key)
+    
     # Unshuffle the text
-    unshuffled = unshuffle_text(encrypted, shuffle_key)
+    unshuffled = unshuffle_text(encrypted, shuffle_key, show_visualization)
+    
+    if show_visualization:
+        print("unshuffled: ", unshuffled)
     
     # Reverse the ASCII transformation
     transformed = reverse_ascii_transform(unshuffled, secret_key)
     
+    if show_visualization:
+        print("transformed: ", transformed)
+    
     # Split into digraphs
     digraphs = [transformed[i:i+2] for i in range(0, len(transformed), 2)]
+    
+    if show_visualization:
+        print("digraphs: ", digraphs)
     
     # Decrypt each pair
     decrypted_pairs = []
@@ -244,6 +367,9 @@ def decrypt_playfair(encrypted, case_encoded, matrix, secret_key):
     
     # Join the decrypted pairs
     decrypted = ''.join(decrypted_pairs)
+    
+    if show_visualization:
+        print("decrypted: ", decrypted)
     
     # Process the result to handle fillers and special cases
     processed = []
@@ -275,6 +401,9 @@ def decrypt_playfair(encrypted, case_encoded, matrix, secret_key):
     # Join the processed result
     result = ''.join(processed)
     
+    if show_visualization:
+        print("result: ", result)
+    
     # Decode case information from hex to binary
     case_bits = ''
     for c in case_encoded:
@@ -298,6 +427,10 @@ def decrypt_playfair(encrypted, case_encoded, matrix, secret_key):
         else:
             # If we run out of case bits or it's not a letter, keep as is
             result_with_case += char
+    
+    if show_visualization:
+        print("result_with_case: ", result_with_case)
+        print("-"*70)
     
     return result_with_case
 
@@ -347,7 +480,7 @@ def main():
     
     try:
         # Decrypt the message
-        decrypted = decrypt_playfair(encrypted, case_encoded, matrix, secret_key)
+        decrypted = decrypt_playfair(encrypted, case_encoded, matrix, secret_key, show_visualization=True)
         
         # Display the result
         print("\nDecrypted message:")

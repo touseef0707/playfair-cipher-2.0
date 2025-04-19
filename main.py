@@ -2,10 +2,21 @@ import os
 import methods
 import playfair_encrypt
 import playfair_decrypt
+from prettytable import PrettyTable
 
 def clear_screen():
     """Clear the terminal screen"""
     os.system('cls' if os.name == 'nt' else 'clear')
+
+def display_matrix_pretty(matrix):
+    """Display the Playfair matrix using PrettyTable"""
+    table = PrettyTable()
+    table.field_names = [f"Col {j+1}" for j in range(len(matrix[0]))]
+    
+    for row in matrix:
+        table.add_row(row)
+    
+    print(table)
 
 def encrypt_mode():
     """Run the encryption mode"""
@@ -46,13 +57,42 @@ def encrypt_mode():
     # Generate the matrix (Plain Traditional)
     matrix = methods.PT(secret_key, matrix_size, special_chars)
     print("\nEncryption Matrix (Plain Traditional):")
-    methods.print_matrix(matrix)
+    # Use PrettyTable instead of regular print
+    display_matrix_pretty(matrix)
     
     try:
-        # Encrypt the message
+        # Show the digraphs with PrettyTable
+        digraphs, case_map = playfair_encrypt.prepare_message(message)
+        
+        # Visualize the digraphs
+        table = PrettyTable()
+        table.field_names = ["Pair #", "Digraph", "Type"]
+        for i, digraph in enumerate(digraphs):
+            is_filler = False
+            if digraph.endswith('X') and (i == len(digraphs) - 1 or (i < len(digraphs) - 1 and digraph[0] == digraphs[i+1][0])):
+                is_filler = True
+            
+            table.add_row([
+                i+1, 
+                digraph, 
+                "Filler added" if is_filler else "Regular"
+            ])
+        
+        print("\nDigraph Formation:")
+        print(table)
+        
+        # Encrypt the message with normal functionality
         encrypted, case_encoded = playfair_encrypt.encrypt_playfair(message, matrix, secret_key)
         
-        # Display the result
+        # Visualize the final results
+        table = PrettyTable()
+        table.field_names = ["Original Message", "Encrypted Result", "Case Encoding"]
+        table.add_row([message, encrypted, case_encoded])
+        
+        print("\nEncryption Results:")
+        print(table)
+        
+        # Original output
         print("\nEncrypted message:")
         print(encrypted)
         
@@ -60,7 +100,6 @@ def encrypt_mode():
         print(case_encoded)
         
         # Display the prepared digraphs for clarity
-        digraphs, _ = playfair_encrypt.prepare_message(message)
         print("\nPassword split into digraphs:")
         print(' '.join(digraphs))
         
@@ -120,13 +159,30 @@ def decrypt_mode():
     # Generate the matrix (Plain Traditional)
     matrix = methods.PT(secret_key, matrix_size, special_chars)
     print("\nDecryption Matrix (Plain Traditional):")
-    methods.print_matrix(matrix)
+    # Use PrettyTable instead of regular print
+    display_matrix_pretty(matrix)
     
     try:
-        # Decrypt the message
+        # Visualize the inputs
+        table = PrettyTable()
+        table.field_names = ["Encrypted Message", "Case Encoding", "Secret Key"]
+        table.add_row([encrypted, case_encoded, secret_key])
+        
+        print("\nDecryption Inputs:")
+        print(table)
+        
+        # Decrypt the message with normal functionality
         decrypted = playfair_decrypt.decrypt_playfair(encrypted, case_encoded, matrix, secret_key)
         
-        # Display the result
+        # Visualize the decryption result
+        table = PrettyTable()
+        table.field_names = ["Encrypted", "Decrypted"]
+        table.add_row([encrypted, decrypted])
+        
+        print("\nDecryption Result:")
+        print(table)
+        
+        # Original output
         print("\nDecrypted message:")
         print(decrypted)
         

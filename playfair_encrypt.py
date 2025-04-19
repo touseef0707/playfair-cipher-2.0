@@ -1,4 +1,5 @@
 import methods
+from prettytable import PrettyTable
 
 def prepare_message(message, filler='X'):
     """
@@ -211,13 +212,14 @@ def generate_shuffle_indices(shuffle_key, length):
     
     return indices
 
-def shuffle_text(text, shuffle_key):
+def shuffle_text(text, shuffle_key, show_visualization=False):
     """
     Shuffle the text using the provided shuffle key
     
     Args:
         text: The text to shuffle
         shuffle_key: The key to use for shuffling
+        show_visualization: Whether to show visualization table
     
     Returns:
         Shuffled text
@@ -239,9 +241,92 @@ def shuffle_text(text, shuffle_key):
         new_pos = position_map[old_pos]
         shuffled[new_pos] = char
     
+    # Show visualization if requested
+    if show_visualization:
+        # First, show how the key is used to generate indices
+        key_table = PrettyTable()
+        key_table.field_names = ["Shuffle Key", "To Key Values"]
+        
+        # Convert shuffle key chars to values for visualization
+        key_values = []
+        key_value_details = []
+        for c in shuffle_key:
+            if c.isdigit():
+                key_values.append(int(c))
+                key_value_details.append(f"{c} → {int(c)}")
+            elif 'A' <= c.upper() <= 'F':
+                val = 10 + ord(c.upper()) - ord('A')
+                key_values.append(val)
+                key_value_details.append(f"{c} → {val} (hex)")
+            else:
+                val = ord(c) % 16
+                key_values.append(val)
+                key_value_details.append(f"{c} → {val} (ord % 16)")
+        
+        key_table.add_row([shuffle_key, " | ".join(key_value_details)])
+        print("\nShuffle Key Interpretation:")
+        print(key_table)
+        
+        # Next, show all Fisher-Yates algorithm steps
+        fisher_table = PrettyTable()
+        fisher_table.field_names = ["Step", "i", "j = key_values[i % len] % (i+1)", "Swap indices[i] & indices[j]", "Result"]
+        
+        # Recreate the Fisher-Yates steps
+        indices_steps = list(range(len(text)))
+        for i in range(len(text) - 1, 0, -1):
+            j = key_values[i % len(key_values)] % (i + 1)
+            indices_steps[i], indices_steps[j] = indices_steps[j], indices_steps[i]
+            
+            # Show every step of the algorithm
+            fisher_table.add_row([
+                f"{len(text) - i}/{len(text) - 1}",
+                i,
+                f"{key_values[i % len(key_values)]} % {i+1} = {j}",
+                f"Swap indices[{i}]={indices_steps[i]} & indices[{j}]={indices_steps[j]}",
+                str(indices_steps)
+            ])
+        
+        print("\nKey Indices Generation (Fisher-Yates Algorithm):")
+        print("(Showing all permutation steps)")
+        print(fisher_table)
+        
+        # Show the mapping table
+        mapping_table = PrettyTable()
+        mapping_table.field_names = ["Original Pos", "Character", "New Position", "In Shuffled Output"]
+        
+        # Show all characters
+        for i in range(len(text)):
+            new_pos = position_map[i]
+            mapping_table.add_row([
+                i+1,
+                text[i],
+                new_pos + 1,
+                f"shuffled[{new_pos}] = '{text[i]}'"
+            ])
+        
+        print("\nShuffling Process:")
+        print(f"Shuffle Key: '{shuffle_key}'")
+        print(mapping_table)
+        
+        # Add a comprehensive index mapping table
+        index_map_table = PrettyTable()
+        index_map_table.field_names = ["Original Text", "Original Indices", "Shuffled Indices", "Shuffled Text"]
+        
+        # Display the text and its indices side by side
+        index_map_table.add_row([
+            text,
+            " ".join([str(i) for i in range(len(text))]),
+            " ".join([str(position_map[i]) for i in range(len(text))]),
+            "".join(shuffled)
+        ])
+        
+        print("\nComprehensive Position Mapping:")
+        print("This shows how the original text positions map to new positions in the shuffled text")
+        print(index_map_table)
+    
     return ''.join(shuffled)
 
-def encrypt_playfair(message, matrix, secret_key):
+def encrypt_playfair(message, matrix, secret_key, show_visualization=False):
     """
     Encrypt a message using the Playfair cipher with enhanced rules.
     
@@ -254,6 +339,7 @@ def encrypt_playfair(message, matrix, secret_key):
         message: The plaintext message to encrypt
         matrix: The encryption matrix (7x7)
         secret_key: The secret key used for additional encryption steps
+        show_visualization: Whether to show visualization tables
     
     Returns:
         A tuple containing (encrypted_message, case_information)
@@ -269,6 +355,10 @@ def encrypt_playfair(message, matrix, secret_key):
     
     # Prepare the message (create digraphs with fillers) and track case
     digraphs, case_map = prepare_message(message, filler='X')
+    
+    if show_visualization:
+        print("digraphs: ", digraphs)
+        print("case_map: ", case_map)
     
     # Create a flattened version of the matrix for indexing
     matrix_flat = []
@@ -286,9 +376,13 @@ def encrypt_playfair(message, matrix, secret_key):
     
     # Join the encrypted pairs
     encrypted = ''.join(encrypted_pairs)
+    if show_visualization:
+        print("encrypted diagraphs: ", encrypted)
     
     # Apply ASCII transformation
     transformed = apply_ascii_transform(encrypted, secret_key)
+    if show_visualization:
+        print("transformed: ", transformed)
     
     # Encode the case information
     # Convert case map to bits where 1=uppercase, 0=lowercase
@@ -304,7 +398,10 @@ def encrypt_playfair(message, matrix, secret_key):
         case_encoded += hex(hex_value)[2:]  # Convert to hex character
     
     # Shuffle the transformed text using the case information as a key
-    shuffled = shuffle_text(transformed, case_encoded)
+    shuffled = shuffle_text(transformed, case_encoded, show_visualization)
+    if show_visualization:
+        print("shuffled: ", shuffled)
+        print("case_encoded: ", case_encoded)
     
     return shuffled, case_encoded
 
@@ -350,7 +447,7 @@ def main():
     
     try:
         # Encrypt the message
-        encrypted, case_encoded = encrypt_playfair(message, matrix, secret_key)
+        encrypted, case_encoded = encrypt_playfair(message, matrix, secret_key, show_visualization=True)
         
         # Display the result
         print("\nEncrypted message:")

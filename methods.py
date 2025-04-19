@@ -149,7 +149,7 @@ def print_matrix(matrix):
     """Print the matrix in a readable format"""
     print("Matrix:")
     for row in matrix:
-        print("".join(f"{cell:3}" for cell in row))
+        print("  ".join(row))
 
 def validate_secret_key(key):
     """Validate the secret key (must be at least 6 characters)"""
@@ -157,8 +157,5 @@ def validate_secret_key(key):
         return False, "Error: Secret key must be at least 6 characters long."
     return True, "Valid key."
 
-# if __name__ == "__main__":
-#     main()
-
-print("Plain Traditional (PT):")
-print_matrix(PT("P@55WORD!",7))
+if __name__ == "__main__":
+    main()
